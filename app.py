@@ -1,5 +1,5 @@
 import os
-from flask import Flask, request, jsonify, abort
+from flask import Flask, request, jsonify, abort,  render_template
 from flask_cors import CORS
 from openai import OpenAI
 from dotenv import load_dotenv
@@ -14,7 +14,7 @@ client = OpenAI(
     base_url="https://api.deepseek.com/v1"
 )
 
-MODEL = os.getenv("DEEPSEEK_MODEL", "deepseek-chat")
+MODEL = os.getenv("DEEPSEEK_MODEL", "deepseek-v4-pro")  # <-- nova variável
 SECRET_TOKEN = os.getenv("SECRET_TOKEN", "minha-senha-secreta")   # <-- nova variável
 
 conversas = {}
@@ -26,7 +26,7 @@ SYSTEM_PROMPT = {
 
 @app.route("/")
 def index():
-    return app.send_static_file("index.html")
+    return render_template("index.html", secret_token=SECRET_TOKEN)
 
 @app.route("/chat", methods=["POST"])
 def chat():
@@ -50,7 +50,7 @@ def chat():
             "messages": conversas[session_id],
             "max_tokens": 4000
         }
-        if MODEL != "deepseek-reasoner":
+        if MODEL != "deepseek-v4-pro":
             params["temperature"] = 0.7
         
         response = client.chat.completions.create(**params)
@@ -66,5 +66,7 @@ def chat():
 def favicon():
     return '', 204
 
+if __name__ == "__main__":
+    app.run(debug=True, port=5000)
 if __name__ == "__main__":
     app.run(debug=True, port=5000)
