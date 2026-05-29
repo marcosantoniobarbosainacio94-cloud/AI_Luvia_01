@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <title>Luvia - Assistente Pessoal</title>
+    <style>
+        body { font-family: Arial; max-width: 600px; margin: 2rem auto; }
+        #chat { border: 1px solid #ccc; height: 400px; overflow-y: auto; padding: 1rem; margin-bottom: 1rem; }
+        input, button { padding: 0.5rem; width: 100%; margin-top: 0.5rem; }
+    </style>
+</head>
+<body>
+    <h1>Luvia, sua assistente pessoal</h1>
+    <div id="chat"></div>
+    <input type="text" id="message" placeholder="Digite sua mensagem..." autofocus>
+    <button onclick="sendMessage()">Enviar</button>
+
+    <script>
+        const chat = document.getElementById("chat");
+        // ATENÇÃO: substitua "minha-senha-secreta" pelo valor que você definir no .env
+        const AUTH_TOKEN = "{{ secret_token }}";; // <-- nova constante para o token de autenticação
+
+        async function sendMessage() {
+            const input = document.getElementById("message");
+            const msg = input.value.trim();
+            if (!msg) return;
+            input.value = "";
+            chat.innerHTML += `<p><strong>Você:</strong> ${msg}</p>`;
+            const res = await fetch("/chat", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "X-Auth-Token": AUTH_TOKEN
+                },
+                body: JSON.stringify({message: msg, session_id: "web"})
+            });
+            if (res.status === 403) {
+                chat.innerHTML += `<p style="color:red;"><strong>Erro:</strong> Acesso negado. Verifique o token.</p>`;
+                return;
+            }
+            const data = await res.json();
+            chat.innerHTML += `<p><strong>Luvia:</strong> ${data.response}</p>`;
+            chat.scrollTop = chat.scrollHeight;
+        }
+        document.getElementById("message").addEventListener("keypress", function(e) {
+            if (e.key === "Enter") sendMessage();
+        });
+    </script>
+</body>
+</html>
