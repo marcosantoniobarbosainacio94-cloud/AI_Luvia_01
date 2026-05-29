@@ -1,0 +1,575 @@
+<!DOCTYPE html>
+<html lang="pt" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Luvia • Assistente Pessoal</title>
+    <!-- Biblioteca para converter Markdown em HTML -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <style>
+        :root {
+            --bg-gradient: linear-gradient(135deg, #f5f0ff 0%, #e0e7ff 100%);
+            --surface: rgba(255,255,255,0.85);
+            --text: #1e1b4b;
+            --sub: #6b7280;
+            --accent: #7c3aed;
+            --accent-glow: #a78bfa;
+            --user-bubble: #7c3aed;
+            --user-text: white;
+            --assistant-bubble: #ffffff;
+            --assistant-border: #e0e7ff;
+            --border: #d4d4f7;
+            --shadow: 0 8px 30px rgba(124,58,237,0.12);
+            --radius: 20px;
+            --transition: 0.25s ease;
+        }
+        [data-theme="dark"] {
+            --bg-gradient: linear-gradient(135deg, #0f0a1e 0%, #1a1035 100%);
+            --surface: rgba(20,15,40,0.9);
+            --text: #f0e6ff;
+            --sub: #a5b4fc;
+            --accent: #a78bfa;
+            --accent-glow: #c4b5fd;
+            --user-bubble: #7c3aed;
+            --user-text: #ffffff;
+            --assistant-bubble: #1e1b4b;
+            --assistant-border: #312e81;
+            --border: #3730a3;
+            --shadow: 0 8px 30px rgba(167,139,250,0.2);
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'Inter', 'Segoe UI', system-ui, sans-serif;
+            background: var(--bg-gradient);
+            color: var(--text);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            transition: background 0.3s, color 0.3s;
+        }
+        .container {
+            width: 100%;
+            max-width: 750px;
+            height: 92vh;
+            background: var(--surface);
+            backdrop-filter: blur(12px);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            border: 1px solid var(--border);
+            transition: all var(--transition);
+        }
+        /* Cabeçalho */
+        .header {
+            padding: 1rem 1.5rem;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 0.8rem;
+        }
+        .avatar {
+            width: 42px;
+            height: 42px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #7c3aed, #a78bfa);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            color: white;
+            font-size: 1.2rem;
+            overflow: hidden;
+        }
+        .avatar img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        .header h1 {
+            font-size: 1.4rem;
+            font-weight: 600;
+            letter-spacing: -0.3px;
+            background: linear-gradient(135deg, #7c3aed, #c084fc);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .theme-toggle {
+            background: var(--assistant-bubble);
+            border: 1px solid var(--border);
+            border-radius: 50px;
+            padding: 0.4rem 1rem;
+            cursor: pointer;
+            font-size: 0.9rem;
+            color: var(--text);
+            transition: all var(--transition);
+            display: flex;
+            align-items: center;
+            gap: 0.3rem;
+        }
+        .theme-toggle:hover {
+            background: var(--border);
+        }
+        /* Área de chat */
+        .chat-box {
+            flex: 1;
+            overflow-y: auto;
+            padding: 1.2rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.8rem;
+            scroll-behavior: smooth;
+        }
+        .message-row {
+            display: flex;
+            gap: 0.6rem;
+            align-items: flex-end;
+        }
+        .message-row.user {
+            justify-content: flex-end;
+        }
+        .message-row.assistant {
+            justify-content: flex-start;
+        }
+        .message-avatar {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #7c3aed, #a78bfa);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            color: white;
+            font-size: 0.9rem;
+            flex-shrink: 0;
+            overflow: hidden;
+        }
+        .message-avatar img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        .user .message-avatar {
+            background: linear-gradient(135deg, #7c3aed, #c084fc);
+        }
+        .bubble {
+            max-width: 75%;
+            padding: 0.8rem 1.1rem;
+            border-radius: 1.2rem;
+            line-height: 1.6;
+            word-wrap: break-word;
+            animation: fadeIn 0.3s ease;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .user .bubble {
+            background: var(--user-bubble);
+            color: var(--user-text);
+            border-bottom-right-radius: 0.4rem;
+        }
+        .assistant .bubble {
+            background: var(--assistant-bubble);
+            border: 1px solid var(--assistant-border);
+            border-bottom-left-radius: 0.4rem;
+        }
+        /* Estilos para conteúdo markdown dentro da bolha */
+        .bubble h1, .bubble h2, .bubble h3 {
+            margin: 0.8rem 0 0.4rem;
+            font-weight: 600;
+        }
+        .bubble p { margin: 0.4rem 0; }
+        .bubble ul, .bubble ol {
+            padding-left: 1.5rem;
+            margin: 0.5rem 0;
+        }
+        .bubble li { margin: 0.2rem 0; }
+        .bubble pre {
+            background: rgba(0,0,0,0.05);
+            padding: 0.8rem;
+            border-radius: 0.6rem;
+            overflow-x: auto;
+            margin: 0.5rem 0;
+            font-size: 0.9rem;
+        }
+        .dark-mode .bubble pre {
+            background: rgba(255,255,255,0.05);
+        }
+        .bubble code {
+            font-family: 'Cascadia Code', 'Fira Code', monospace;
+            font-size: 0.9rem;
+            background: rgba(0,0,0,0.05);
+            padding: 0.15em 0.3em;
+            border-radius: 3px;
+        }
+        .bubble pre code {
+            background: none;
+            padding: 0;
+        }
+        .bubble strong {
+            color: inherit;
+            font-weight: 700;
+        }
+        /* Indicador de digitando */
+        .typing-row {
+            display: flex;
+            gap: 0.6rem;
+            align-items: flex-end;
+        }
+        .typing-bubble {
+            background: var(--assistant-bubble);
+            border: 1px solid var(--assistant-border);
+            padding: 0.8rem 1.2rem;
+            border-radius: 1.2rem;
+            border-bottom-left-radius: 0.4rem;
+            display: flex;
+            gap: 0.4rem;
+            align-items: center;
+        }
+        .typing-bubble span {
+            width: 7px;
+            height: 7px;
+            background: var(--accent);
+            border-radius: 50%;
+            animation: bounce 1.4s infinite ease-in-out both;
+        }
+        .typing-bubble span:nth-child(1) { animation-delay: -0.32s; }
+        .typing-bubble span:nth-child(2) { animation-delay: -0.16s; }
+        @keyframes bounce {
+            0%, 80%, 100% { transform: scale(0); }
+            40% { transform: scale(1); }
+        }
+        /* Área de input */
+        .input-area {
+            display: flex;
+            padding: 0.8rem 1.2rem;
+            border-top: 1px solid var(--border);
+            gap: 0.6rem;
+            background: var(--surface);
+            backdrop-filter: blur(10px);
+        }
+        .input-area textarea {
+            flex: 1;
+            resize: none;
+            border: 1px solid var(--border);
+            border-radius: 1.5rem;
+            padding: 0.8rem 1.2rem;
+            font-size: 1rem;
+            background: var(--bg-gradient);
+            color: var(--text);
+            outline: none;
+            font-family: inherit;
+            max-height: 120px;
+            transition: border-color var(--transition);
+        }
+        .input-area textarea:focus {
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(124,58,237,0.15);
+        }
+        .input-area button {
+            background: linear-gradient(135deg, #7c3aed, #a78bfa);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 48px;
+            height: 48px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all var(--transition);
+            box-shadow: 0 4px 12px rgba(124,58,237,0.4);
+        }
+        .input-area button:hover {
+            transform: scale(1.08);
+            box-shadow: 0 6px 18px rgba(124,58,237,0.5);
+        }
+        .input-area button:active {
+            transform: scale(0.95);
+        }
+        .input-area button svg {
+            width: 20px;
+            height: 20px;
+            fill: white;
+        }
+        /* Scrollbar estilizada */
+        .chat-box::-webkit-scrollbar { width: 6px; }
+        .chat-box::-webkit-scrollbar-track { background: transparent; }
+        .chat-box::-webkit-scrollbar-thumb {
+            background: var(--border);
+            border-radius: 3px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Cabeçalho com avatar e tema -->
+        <div class="header">
+            <div class="header-left">
+                <div class="avatar" id="headerAvatar">
+                    <!-- Fallback: iniciais "LU" enquanto não há imagem -->
+                    LU
+                </div>
+                <h1>Luvia</h1>
+            </div>
+            <button class="theme-toggle" id="themeToggle">
+                <span id="themeIcon">🌙</span> <span id="themeText">Escuro</span>
+            </button>
+        </div>
+
+        <!-- Histórico da conversa -->
+        <div class="chat-box" id="chatBox"></div>
+
+        <!-- Input de mensagem -->
+        <div class="input-area">
+            <textarea id="userInput" placeholder="Escreva para Luvia..." rows="1"></textarea>
+            <button id="sendBtn" title="Enviar">
+                <svg viewBox="0 0 24 24"><path d="M2 21l21-9L2 3v7l15 2-15 2v7z"/></svg>
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // Token injetado pelo Flask (NÃO aparece no código-fonte público)
+        const AUTH_TOKEN = "{{ secret_token }}";
+
+        // Configuração do Marked (biblioteca markdown)
+        marked.setOptions({
+            breaks: true,        // quebras de linha simples viram <br>
+            gfm: true,           // GitHub Flavored Markdown
+            sanitize: false,     // permitimos HTML (o conteúdo vem da IA, é seguro)
+        });
+
+        // Elementos da interface
+        const chatBox = document.getElementById("chatBox");
+        const userInput = document.getElementById("userInput");
+        const sendBtn = document.getElementById("sendBtn");
+        const themeToggle = document.getElementById("themeToggle");
+        const themeIcon = document.getElementById("themeIcon");
+        const themeText = document.getElementById("themeText");
+        const headerAvatar = document.getElementById("headerAvatar");
+
+        // Identificador da conversa
+        const conversationId = "web-" + Date.now();
+        let isWaiting = false;
+
+        // Histórico local (persiste ao recarregar)
+        const STORAGE_KEY = "luvia_chat_history";
+        let messages = loadHistory();
+
+        // Avatar da Luvia (usaremos uma imagem da pasta static, se existir)
+        const assistantAvatarImg = '/static/avatar.png'; // coloque sua foto aqui!
+        // Se quiser usar um fallback com iniciais, comente a linha acima e descomente abaixo:
+        // const assistantAvatarHtml = '<div class="message-avatar">LU</div>';
+
+        // ================== Funções ==================
+        function loadHistory() {
+            try {
+                const stored = localStorage.getItem(STORAGE_KEY);
+                return stored ? JSON.parse(stored) : [];
+            } catch (e) {
+                return [];
+            }
+        }
+        function saveHistory() {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(messages));
+        }
+
+        // Renderiza uma única mensagem no chat
+        function renderMessage(role, content, animate = true) {
+            const row = document.createElement("div");
+            row.className = `message-row ${role}`;
+
+            // Avatar (só para assistente; usuário não tem avatar)
+            if (role === "assistant") {
+                const avatarDiv = document.createElement("div");
+                avatarDiv.className = "message-avatar";
+                // Tenta carregar a imagem; se falhar, mostra iniciais "LU"
+                const img = new Image();
+                img.src = assistantAvatarImg;
+                img.onload = () => {
+                    avatarDiv.innerHTML = '';
+                    avatarDiv.appendChild(img);
+                };
+                img.onerror = () => {
+                    avatarDiv.textContent = 'LU';
+                };
+                // Já insere a imagem, o evento onload cuida do resto
+                avatarDiv.innerHTML = `<img src="${assistantAvatarImg}" alt="Luvia" onerror="this.style.display='none'; this.parentElement.textContent='LU';">`;
+                row.appendChild(avatarDiv);
+            }
+
+            // Bolha da mensagem
+            const bubble = document.createElement("div");
+            bubble.className = "bubble";
+
+            if (role === "assistant") {
+                // Converte markdown para HTML
+                bubble.innerHTML = marked.parse(content);
+            } else {
+                // Mensagem do usuário: texto puro
+                bubble.textContent = content;
+            }
+
+            row.appendChild(bubble);
+            if (animate) row.style.animation = "fadeIn 0.3s ease";
+            chatBox.appendChild(row);
+            scrollToBottom();
+        }
+
+        // Reconstroi todo o chat a partir do histórico
+        function renderAllMessages() {
+            chatBox.innerHTML = "";
+            messages.forEach(msg => renderMessage(msg.role, msg.content, false));
+        }
+
+        function scrollToBottom() {
+            chatBox.scrollTop = chatBox.scrollHeight;
+        }
+
+        function showTypingIndicator() {
+            const row = document.createElement("div");
+            row.className = "typing-row";
+            // Avatar da Luvia
+            const avatarDiv = document.createElement("div");
+            avatarDiv.className = "message-avatar";
+            avatarDiv.innerHTML = `<img src="${assistantAvatarImg}" alt="Luvia" onerror="this.style.display='none'; this.parentElement.textContent='LU';">`;
+            row.appendChild(avatarDiv);
+            // Bolinha de digitação
+            const bubble = document.createElement("div");
+            bubble.className = "typing-bubble";
+            bubble.innerHTML = "<span></span><span></span><span></span>";
+            row.appendChild(bubble);
+            row.id = "typingIndicator";
+            chatBox.appendChild(row);
+            scrollToBottom();
+        }
+
+        function removeTypingIndicator() {
+            const indicator = document.getElementById("typingIndicator");
+            if (indicator) indicator.remove();
+        }
+
+        async function sendMessage() {
+            const text = userInput.value.trim();
+            if (!text || isWaiting) return;
+
+            // Adiciona ao histórico
+            messages.push({ role: "user", content: text });
+            saveHistory();
+            renderMessage("user", text);
+            userInput.value = "";
+            userInput.style.height = "auto";
+
+            // Mostra indicador de digitação
+            isWaiting = true;
+            showTypingIndicator();
+            sendBtn.disabled = true;
+
+            try {
+                const response = await fetch("/chat", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "X-Auth-Token": AUTH_TOKEN
+                    },
+                    body: JSON.stringify({
+                        message: text,
+                        session_id: conversationId
+                    })
+                });
+
+                if (response.status === 403) {
+                    removeTypingIndicator();
+                    renderMessage("assistant", "⛔ Acesso negado. Verifique o token de segurança.");
+                    isWaiting = false;
+                    sendBtn.disabled = false;
+                    return;
+                }
+
+                if (!response.ok) {
+                    const err = await response.json();
+                    throw new Error(err.error || "Erro desconhecido");
+                }
+
+                const data = await response.json();
+                const reply = data.response;
+
+                // Adiciona resposta da Luvia ao histórico
+                messages.push({ role: "assistant", content: reply });
+                saveHistory();
+                removeTypingIndicator();
+                renderMessage("assistant", reply);
+            } catch (error) {
+                removeTypingIndicator();
+                renderMessage("assistant", `❌ Erro: ${error.message}`);
+                console.error(error);
+            } finally {
+                isWaiting = false;
+                sendBtn.disabled = false;
+                userInput.focus();
+            }
+        }
+
+        // ================== Eventos ==================
+        sendBtn.addEventListener("click", sendMessage);
+        userInput.addEventListener("keydown", (e) => {
+            if (e.key === "Enter" && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
+            }
+        });
+        userInput.addEventListener("input", () => {
+            userInput.style.height = "auto";
+            userInput.style.height = Math.min(userInput.scrollHeight, 120) + "px";
+        });
+
+        // Alternar tema claro/escuro
+        function setTheme(theme) {
+        document.documentElement.setAttribute("data-theme", theme);
+            if (theme === "dark") {
+                themeIcon.textContent = "🌙";   // ícone de lua = está escuro
+                themeText.textContent = "Escuro";
+            } else {
+                themeIcon.textContent = "☀️";   // ícone de sol = está claro
+                themeText.textContent = "Claro";
+            }
+        localStorage.setItem("luvia_theme", theme);
+        }
+        themeToggle.addEventListener("click", () => {
+            const current = document.documentElement.getAttribute("data-theme");
+            const next = current === "dark" ? "light" : "dark";
+            setTheme(next);
+        });
+
+        // Inicialização
+        const savedTheme = localStorage.getItem("luvia_theme") || "light";
+        setTheme(savedTheme);
+        renderAllMessages();
+        userInput.focus();
+
+        // Atualiza avatar do cabeçalho com a mesma imagem (se existir)
+        const headerImg = new Image();
+        headerImg.src = assistantAvatarImg;
+        headerImg.onload = () => {
+            headerAvatar.innerHTML = '';
+            headerAvatar.appendChild(headerImg.cloneNode());
+        };
+        headerImg.onerror = () => {
+            headerAvatar.textContent = 'LU';
+        };
+        // Força tentativa imediata
+        headerAvatar.innerHTML = `<img src="${assistantAvatarImg}" alt="Luvia" onerror="this.style.display='none'; this.parentElement.textContent='LU';">`;
+    </script>
+</body>
+</html>
