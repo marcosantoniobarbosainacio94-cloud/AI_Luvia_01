@@ -18,8 +18,8 @@
     <script>
         const chat = document.getElementById("chat");
         // ATENÇÃO: substitua "minha-senha-secreta" pelo valor que você definir no .env
-        const AUTH_TOKEN = "minha-senha-secreta";
-
+        const AUTH_TOKEN = prompt("Digite a senha de acesso:");
+        
         async function sendMessage() {
             const input = document.getElementById("message");
             const msg = input.value.trim();
